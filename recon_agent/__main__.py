@@ -8,6 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
+# Windows requires the ProactorEventLoop for asyncio.create_subprocess_exec
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -44,8 +48,9 @@ async def _run_agent() -> None:
 
     wizard_result = run_wizard()
 
+    from recon_agent.core.platform import temp_dir
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    run_dir = Path("/tmp/recon-agent/runs") / timestamp
+    run_dir = temp_dir("runs") / timestamp
     run_dir.mkdir(parents=True, exist_ok=True)
 
     configure_logging(log_file=run_dir / "agent.log", level="INFO")

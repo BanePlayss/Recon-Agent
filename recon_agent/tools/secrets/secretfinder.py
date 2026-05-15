@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Any
 
 import structlog
 
+from recon_agent.core.platform import PYTHON_EXE
 from recon_agent.core.state import ToolCategory
 from recon_agent.tools.base import Tool, ToolResult
 
@@ -18,6 +20,14 @@ logger = structlog.get_logger(__name__)
 # SecretFinder may be installed as a script or via pip
 _BINARIES = ["SecretFinder", "secretfinder", "secretfinder.py"]
 
+_COMMON_PATHS = [
+    "/opt/SecretFinder/SecretFinder.py",
+    "/usr/share/SecretFinder/SecretFinder.py",
+    # Windows paths
+    r"C:\Tools\SecretFinder\SecretFinder.py",
+    r"C:\SecretFinder\SecretFinder.py",
+]
+
 
 def _find_binary() -> str | None:
     import shutil
@@ -25,13 +35,9 @@ def _find_binary() -> str | None:
         found = shutil.which(name)
         if found:
             return found
-    common_paths = [
-        "/opt/SecretFinder/SecretFinder.py",
-        "/usr/share/SecretFinder/SecretFinder.py",
-    ]
-    for p in common_paths:
+    for p in _COMMON_PATHS:
         if Path(p).exists():
-            return f"python3 {p}"
+            return p  # caller prepends PYTHON_EXE
     return None
 
 
@@ -64,9 +70,9 @@ class SecretFinderTool(Tool):
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
             output_path = Path(tf.name)
 
-        if binary.startswith("python3 "):
-            script = binary.split(" ", 1)[1]
-            cmd = ["python3", script, "-i", target, "-o", "json", "-e", str(output_path)]
+        # binary is either a direct executable or a .py script path
+        if binary.endswith(".py"):
+            cmd = [PYTHON_EXE, binary, "-i", target, "-o", "json", "-e", str(output_path)]
         else:
             cmd = [binary, "-i", target, "-o", "json", "-e", str(output_path)]
 

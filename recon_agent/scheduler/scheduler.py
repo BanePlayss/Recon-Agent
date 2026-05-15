@@ -16,6 +16,7 @@ Cycle:
 import asyncio
 import os
 import signal
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -65,9 +66,14 @@ class HuntScheduler:
             title="recon-agent scheduler",
         ))
 
-        loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGTERM, self._handle_stop)
-        loop.add_signal_handler(signal.SIGINT, self._handle_stop)
+        # add_signal_handler is Unix-only; use signal.signal() on Windows
+        if sys.platform != "win32":
+            loop = asyncio.get_event_loop()
+            loop.add_signal_handler(signal.SIGTERM, self._handle_stop)
+            loop.add_signal_handler(signal.SIGINT, self._handle_stop)
+        else:
+            signal.signal(signal.SIGTERM, lambda s, f: self._handle_stop())
+            signal.signal(signal.SIGINT, lambda s, f: self._handle_stop())
 
         try:
             while not self._stop_event.is_set():
@@ -150,7 +156,8 @@ class HuntScheduler:
                     f"[dim](priority={prog.priority.name})[/dim]"
                 ))
 
-                run_base = Path("/tmp/recon-agent/scheduler")
+                from recon_agent.core.platform import temp_dir
+                run_base = temp_dir("scheduler")
                 run_base.mkdir(parents=True, exist_ok=True)
 
                 scan_start = time.monotonic()

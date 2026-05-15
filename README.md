@@ -33,17 +33,19 @@ Scheduler roda  ─────►  Telegram alert  ─────►  Você re
 
 ## Requisitos
 
-- Kali Linux (Live USB ou instalado) — ou qualquer Linux com Python 3.11+
 - Python 3.11+
 - [GEMINI_API_KEY](https://aistudio.google.com/) — obrigatório (grátis no tier básico)
 - [ANTHROPIC_API_KEY](https://console.anthropic.com/) — opcional, melhora análise de findings críticos
+- Linux (Kali recomendado), Windows 10/11, ou macOS
 
 ---
 
 ## Instalação
 
+### Linux / Kali (recomendado — cobertura de ferramentas completa)
+
 ```bash
-# 1. Clone e instale dependências do sistema + ferramentas Go
+# 1. Instala todas as dependências (nmap, nuclei, subfinder, etc.)
 bash <(curl -fsSL https://raw.githubusercontent.com/baneplayss/recon-agent/main/install.sh)
 
 # 2. Instale o agente
@@ -53,9 +55,45 @@ pipx install git+https://github.com/baneplayss/recon-agent.git
 recon-agent tools
 ```
 
-O `install.sh` instala automaticamente: `subfinder`, `httpx`, `nuclei`, `katana`,
-`dnsx`, `naabu`, `dalfox`, `trufflehog`, `gitleaks`, `ffuf`, `amass` (via Go),
-e `nmap`, `nikto`, `wpscan`, `sqlmap`, `masscan`, `gobuster` (via apt).
+### Windows 10/11
+
+```powershell
+# 1. Abra PowerShell como Administrador e habilite scripts:
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# 2. Baixe e execute o installer:
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/baneplayss/recon-agent/main/install.ps1 -OutFile install.ps1
+.\install.ps1
+
+# 3. Reabra o PowerShell e verifique:
+recon-agent tools
+```
+
+O `install.ps1` instala via **Scoop** (nmap, go) e **go install** (subfinder, httpx, nuclei,
+katana, dnsx, dalfox, trufflehog, gitleaks, ffuf, gobuster, amass).
+
+> **Ferramentas não disponíveis no Windows nativamente:**
+> `masscan`, `nikto`, `wpscan`, `testssl` — o agente as ignora automaticamente.
+> Para cobertura total, use [WSL2](https://docs.microsoft.com/windows/wsl/) e execute `install.sh` dentro do WSL.
+
+### Scheduler no Windows (daemon automático)
+
+O `install.ps1` cria uma tarefa no **Agendador de Tarefas** do Windows (`recon-agent-scheduler`)
+que roda o hunt a cada 6 horas. Para gerenciar:
+
+```powershell
+# Ver status
+recon-agent scheduler-status
+
+# Parar / iniciar manualmente
+Stop-ScheduledTask  -TaskName "recon-agent-scheduler"
+Start-ScheduledTask -TaskName "recon-agent-scheduler"
+```
+
+Também funciona com `nohup` no WSL ou **Git Bash**:
+```bash
+nohup recon-agent scheduler-start --interval 6 --top 5 &
+```
 
 ---
 

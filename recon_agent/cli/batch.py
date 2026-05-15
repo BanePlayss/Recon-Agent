@@ -150,7 +150,8 @@ async def run_batch(
     max_cost_usd: float = 5.0,
     gemini_api_key: str = "",
 ) -> list[dict[str, Any]]:
-    run_base_dir = Path("/tmp/recon-agent/batch")
+    from recon_agent.core.platform import temp_dir
+    run_base_dir = temp_dir("batch")
     run_base_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict[str, Any]] = []
