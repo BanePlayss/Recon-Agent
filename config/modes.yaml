@@ -1,0 +1,51 @@
+modes:
+  fast:
+    label: "Rápido (~15min, recon + nuclei safe)"
+    max_iterations: 30
+    max_hours: 0.5
+    allowed_categories:
+      - recon_passive
+      - recon_active
+      - web_scan
+    nuclei_severity: ["critical", "high"]
+    fuzzing_enabled: false
+
+  standard:
+    label: "Padrão (~45min, recon + web scan completo)"
+    max_iterations: 60
+    max_hours: 1.0
+    allowed_categories:
+      - recon_passive
+      - recon_active
+      - infra_scan
+      - web_scan
+    nuclei_severity: ["critical", "high", "medium"]
+    fuzzing_enabled: false
+
+  deep:
+    label: "Profundo (~3h, tudo + fuzzing pesado)"
+    max_iterations: 100
+    max_hours: 3.0
+    allowed_categories:
+      - recon_passive
+      - recon_active
+      - infra_scan
+      - web_scan
+      - secrets
+    nuclei_severity: ["critical", "high", "medium", "low"]
+    fuzzing_enabled: true
+
+agent_modes:
+  adaptive:
+    label: "Adaptativo (LLM decide, aprova ações ativas)"
+    auto_approve_passive: true
+    require_approval_for: ["exploit", "recon_active"]
+
+  conservative:
+    label: "Conservador (sem ações ativas nunca)"
+    auto_approve_passive: true
+    allowed_categories:
+      - recon_passive
+      - web_scan
+    require_approval_for: []
+    block_categories: ["exploit", "recon_active", "infra_scan"]

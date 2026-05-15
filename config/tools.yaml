@@ -1,0 +1,42 @@
+tools:
+  subfinder:
+    binary: subfinder
+    category: recon_passive
+    requires_approval: false
+    timeout_s: 300
+    description: "Passive subdomain enumeration via OSINT sources"
+    flags:
+      default: ["-silent", "-o", "{output_file}"]
+      with_all: ["-silent", "-all", "-o", "{output_file}"]
+
+  httpx:
+    binary: httpx
+    category: recon_active
+    requires_approval: false
+    timeout_s: 180
+    description: "HTTP probing to identify alive hosts and their metadata"
+    flags:
+      default:
+        - "-silent"
+        - "-status-code"
+        - "-title"
+        - "-tech-detect"
+        - "-json"
+        - "-o"
+        - "{output_file}"
+
+  nuclei:
+    binary: nuclei
+    category: web_scan
+    requires_approval: false
+    timeout_s: 600
+    description: "Template-based vulnerability scanner"
+    flags:
+      default:
+        - "-silent"
+        - "-json"
+        - "-o"
+        - "{output_file}"
+        - "-severity"
+        - "{severity}"
+      no_interactsh: ["-no-interactsh"]

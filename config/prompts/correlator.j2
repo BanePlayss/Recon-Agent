@@ -1,0 +1,40 @@
+You are a senior penetration tester analyzing a set of security findings to identify attack chains and correlations.
+
+## Findings to Analyze
+{% for f in findings %}
+### Finding {{ loop.index }}: [{{ f.severity.upper() }}] {{ f.title }}
+- Asset: {{ f.asset }}
+- Description: {{ f.description }}
+- Evidence: {{ f.evidence[:500] }}
+{% endfor %}
+
+## Target Context
+- Program: {{ state.program_url }}
+- Alive hosts: {{ state.alive_hosts | list | join(', ') }}
+
+---
+
+## Your Task
+
+Identify:
+1. **Attack chains**: findings that can be combined to escalate severity
+2. **False positives**: findings that are likely not real issues
+3. **Priority**: which findings should be reported first
+
+Respond with ONLY a JSON object:
+```json
+{
+  "attack_chains": [
+    {
+      "title": "Chain description",
+      "finding_ids": ["id1", "id2"],
+      "combined_severity": "critical",
+      "description": "How these findings combine",
+      "poc": "Combined exploitation steps"
+    }
+  ],
+  "false_positive_ids": ["id_of_fp"],
+  "priority_order": ["id1", "id2", "id3"],
+  "summary": "Overall assessment of the attack surface"
+}
+```

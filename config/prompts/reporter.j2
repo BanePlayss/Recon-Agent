@@ -1,0 +1,91 @@
+# Recon Report — {{ state.program_url }}
+
+**Generated:** {{ timestamp }}
+**Duration:** {{ "%.1f"|format(state.elapsed_s / 60) }} minutes
+**Iterations:** {{ state.iteration }}
+**API Cost:** ${{ "%.4f"|format(state.cost_usd) }}
+
+---
+
+## Executive Summary
+
+**Targets:** {{ state.targets_in_scope | join(', ') }}
+**Subdomains discovered:** {{ state.discovered_subdomains | list | length }}
+**Alive hosts:** {{ state.alive_hosts | length }}
+**Total findings:** {{ state.findings | length }}
+
+### Finding Breakdown
+{% set ns = namespace(critical=0, high=0, medium=0, low=0, info=0) %}
+{% for f in state.findings %}
+  {% if f.severity == 'critical' %}{% set ns.critical = ns.critical + 1 %}
+  {% elif f.severity == 'high' %}{% set ns.high = ns.high + 1 %}
+  {% elif f.severity == 'medium' %}{% set ns.medium = ns.medium + 1 %}
+  {% elif f.severity == 'low' %}{% set ns.low = ns.low + 1 %}
+  {% else %}{% set ns.info = ns.info + 1 %}{% endif %}
+{% endfor %}
+
+| Severity | Count |
+|----------|-------|
+| Critical | {{ ns.critical }} |
+| High     | {{ ns.high }} |
+| Medium   | {{ ns.medium }} |
+| Low      | {{ ns.low }} |
+| Info     | {{ ns.info }} |
+
+---
+
+## Attack Surface
+
+### Discovered Subdomains ({{ state.discovered_subdomains | list | length }})
+{% for sub in state.discovered_subdomains | list | sort %}
+- `{{ sub }}`
+{% endfor %}
+
+### Alive Hosts ({{ state.alive_hosts | length }})
+{% for host, meta in state.alive_hosts.items() %}
+- `{{ host }}` — {{ meta.get('status_code', '?') }} {{ meta.get('title', '') }}
+  {% if meta.get('tech') %}  Tech: {{ meta.get('tech', []) | join(', ') }}{% endif %}
+{% endfor %}
+
+---
+
+## Findings
+
+{% for f in state.findings | sort(attribute='severity') %}
+### {{ loop.index }}. [{{ f.severity.upper() }}] {{ f.title }}
+
+**Asset:** `{{ f.asset }}`
+**Confidence:** {{ "%.0f"|format(f.confidence * 100) }}%
+**Source:** {{ f.source_tool }}
+{% if f.cwe %}**CWE:** {{ f.cwe }}{% endif %}
+{% if f.cvss %}**CVSS:** {{ f.cvss }}{% endif %}
+
+**Description:**
+{{ f.description }}
+
+**Evidence:**
+```
+{{ f.evidence }}
+```
+
+{% if f.poc %}
+**Proof of Concept:**
+{{ f.poc }}
+{% endif %}
+
+**Impact:**
+{{ f.impact }}
+
+**Remediation:**
+{{ f.remediation }}
+
+---
+{% endfor %}
+
+## Actions Taken
+
+| # | Tool | Target | Status | Duration |
+|---|------|--------|--------|----------|
+{% for a in state.actions_taken %}
+| {{ loop.index }} | {{ a.tool }} | {{ a.target }} | {{ a.status }} | {{ "%.1f"|format(a.duration_s) }}s |
+{% endfor %}
