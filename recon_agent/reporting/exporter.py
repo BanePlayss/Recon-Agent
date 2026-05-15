@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 import structlog
 
 from recon_agent.core.state import AgentState
+from recon_agent.reporting.h1_json import findings_to_h1_bundle
 
 logger = structlog.get_logger(__name__)
 
@@ -32,15 +32,24 @@ class Exporter:
             json.dumps(findings_data, indent=2), encoding="utf-8"
         )
 
+        # H1 JSON format — ready-to-submit bundle
+        h1_path = self._run_dir / "h1_reports.json"
+        h1_bundle = findings_to_h1_bundle(state.findings, state.program_url)
+        h1_path.write_text(
+            json.dumps(h1_bundle, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+
         logger.info(
             "exporter.done",
             run_dir=str(self._run_dir),
             report=str(report_path),
             findings=len(state.findings),
+            h1_reports=h1_bundle["total"],
         )
 
         return {
             "report": report_path,
             "state": state_path,
             "findings": findings_path,
+            "h1": h1_path,
         }

@@ -23,6 +23,10 @@ class ToolRegistry:
     def all_tools(self) -> list[Tool]:
         return list(self._tools.values())
 
+    def available_tools(self) -> list[Tool]:
+        """Return only tools whose binary is present in PATH."""
+        return [t for t in self._tools.values() if t.is_available()]
+
     def names(self) -> list[str]:
         return list(self._tools.keys())
 
@@ -37,6 +41,9 @@ def build_default_registry() -> ToolRegistry:
     from recon_agent.tools.recon.nmap_tool import NmapTool
     from recon_agent.tools.recon.masscan import MasscanTool
     from recon_agent.tools.recon.theharvester import TheHarvesterTool
+    from recon_agent.tools.recon.dnsx import DnsxTool
+    from recon_agent.tools.recon.crtsh import CrtshTool
+    from recon_agent.tools.recon.naabu import NaabuTool
     from recon_agent.tools.web.nuclei import NucleiTool
     from recon_agent.tools.web.ffuf import FfufTool
     from recon_agent.tools.web.katana import KatanaTool
@@ -54,15 +61,17 @@ def build_default_registry() -> ToolRegistry:
     from recon_agent.tools.secrets.trufflehog import TrufflehogTool
     from recon_agent.tools.secrets.gitleaks import GitleaksTool
     from recon_agent.tools.secrets.secretfinder import SecretFinderTool
+    from recon_agent.tools.cloud.trivy import TrivyTool
+    from recon_agent.tools.cloud.prowler import ProwlerTool
 
     registry = ToolRegistry()
     for tool in [
         # recon passive
-        SubfinderTool(), AmassTool(), TheHarvesterTool(),
+        SubfinderTool(), AmassTool(), TheHarvesterTool(), CrtshTool(),
         # recon active
-        HttpxTool(), Wafw00fTool(),
+        HttpxTool(), DnsxTool(), Wafw00fTool(),
         # infra
-        NmapTool(), MasscanTool(),
+        NmapTool(), NaabuTool(), MasscanTool(),
         # web scan
         NucleiTool(), FfufTool(), KatanaTool(), NiktoTool(),
         WpscanTool(), TestsslTool(), ArjunTool(), GobusterTool(),
@@ -70,6 +79,8 @@ def build_default_registry() -> ToolRegistry:
         SqlmapTool(), DalfoxTool(), XSStrikeTool(), NoSQLMapTool(), CommixTool(),
         # secrets
         TrufflehogTool(), GitleaksTool(), SecretFinderTool(),
+        # cloud
+        TrivyTool(), ProwlerTool(),
     ]:
         registry.register(tool)
     return registry

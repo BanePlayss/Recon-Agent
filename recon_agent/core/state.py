@@ -22,6 +22,7 @@ class ToolCategory(str, Enum):
     WEB_SCAN = "web_scan"
     EXPLOIT = "exploit"
     SECRETS = "secrets"
+    CLOUD_SCAN = "cloud_scan"
 
 
 class Finding(BaseModel):

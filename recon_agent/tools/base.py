@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import shlex
+import shutil
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -35,6 +36,10 @@ class Tool(ABC):
     requires_approval: bool = False
     timeout_s: int = 300
 
+    def is_available(self) -> bool:
+        """Return True if the tool binary is present in PATH."""
+        return shutil.which(self.name) is not None
+
     @abstractmethod
     async def run(self, target: str, **kwargs: Any) -> ToolResult: ...
 
@@ -50,7 +55,6 @@ class Tool(ABC):
         """Execute a subprocess and return (stdout, stderr, returncode)."""
         timeout = timeout_s or self.timeout_s
 
-        # Validate no shell injection — only allow safe chars in args
         for arg in cmd:
             if any(c in arg for c in [";", "&&", "||", "`", "$("]):
                 raise ToolExecutionError(f"Potentially unsafe argument detected: {arg!r}")

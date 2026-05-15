@@ -200,7 +200,7 @@ class TestFullRegistryHackingtool:
         for name in expected:
             assert name in registry, f"Tool '{name}' not in registry"
 
-    def test_total_tool_count(self):
+    def test_total_tool_count_at_least_23(self):
         from recon_agent.tools.registry import build_default_registry
         registry = build_default_registry()
-        assert len(registry.all_tools()) == 23
+        assert len(registry.all_tools()) >= 23

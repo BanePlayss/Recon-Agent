@@ -89,7 +89,7 @@ class Orchestrator:
         return self._state
 
     async def _agent_loop(self) -> None:
-        available_tools = self._registry.all_tools()
+        available_tools = self._registry.available_tools()
 
         while True:
             self._state.elapsed_s = time.monotonic() - self._start_time
@@ -342,6 +342,7 @@ class Orchestrator:
             f"Findings: {real} confirmed, {len(self._state.findings) - real} false positives\n"
             f"Attack chains: {len(self._state.attack_chains)}\n"
             f"Cost: ${self._state.cost_usd:.4f}\n"
-            f"Report: {paths['report']}",
+            f"Report: {paths['report']}\n"
+            f"H1 JSON: {paths['h1']}",
             title="Done",
         ))
