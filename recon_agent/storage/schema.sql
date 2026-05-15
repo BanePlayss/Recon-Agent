@@ -52,3 +52,25 @@ CREATE TABLE IF NOT EXISTS audit_events (
 CREATE INDEX IF NOT EXISTS idx_findings_run ON findings(run_id);
 CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings(severity);
 CREATE INDEX IF NOT EXISTS idx_actions_run ON actions(run_id);
+
+-- Scheduler: tracks last scan per H1 program handle to avoid re-scanning
+CREATE TABLE IF NOT EXISTS scheduler_programs (
+    handle          TEXT PRIMARY KEY,
+    program_url     TEXT NOT NULL,
+    last_scanned_at REAL,
+    scope_hash      TEXT,
+    scan_count      INTEGER DEFAULT 0,
+    first_seen_at   REAL NOT NULL
+);
+
+-- Scheduler: hashes of findings already notified to avoid duplicate alerts
+CREATE TABLE IF NOT EXISTS notified_findings (
+    finding_hash    TEXT PRIMARY KEY,
+    title           TEXT NOT NULL,
+    severity        TEXT NOT NULL,
+    program_handle  TEXT NOT NULL,
+    notified_at     REAL NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduler_last ON scheduler_programs(last_scanned_at);
+CREATE INDEX IF NOT EXISTS idx_notified_hash ON notified_findings(finding_hash);

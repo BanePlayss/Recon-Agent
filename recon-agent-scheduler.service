@@ -1,0 +1,16 @@
+[Unit]
+Description=recon-agent hunt scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+EnvironmentFile=%h/.recon-agent/.env
+ExecStart=/usr/local/bin/recon-agent scheduler-start --interval 6 --top 5 --notify critical,high
+Restart=on-failure
+RestartSec=60
+StandardOutput=append:%h/.recon-agent/scheduler.log
+StandardError=append:%h/.recon-agent/scheduler.log
+
+[Install]
+WantedBy=default.target

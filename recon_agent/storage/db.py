@@ -110,3 +110,81 @@ class Database:
         cur = self._cursor()
         cur.execute("SELECT * FROM findings WHERE run_id=? ORDER BY severity", (run_id,))
         return [dict(row) for row in cur.fetchall()]
+
+    # ── Scheduler methods ────────────────────────────────────────────────────
+
+    def upsert_scheduler_program(
+        self,
+        handle: str,
+        program_url: str,
+        scope_hash: str,
+    ) -> bool:
+        """Insert or update a tracked program. Returns True if it's new."""
+        cur = self._cursor()
+        cur.execute(
+            "SELECT handle, scope_hash FROM scheduler_programs WHERE handle=?",
+            (handle,),
+        )
+        row = cur.fetchone()
+        now = time.time()
+        if row is None:
+            cur.execute(
+                """INSERT INTO scheduler_programs
+                   (handle, program_url, scope_hash, scan_count, first_seen_at)
+                   VALUES (?, ?, ?, 0, ?)""",
+                (handle, program_url, scope_hash, now),
+            )
+            assert self._conn
+            self._conn.commit()
+            return True  # new program
+        if row["scope_hash"] != scope_hash:
+            cur.execute(
+                "UPDATE scheduler_programs SET scope_hash=?, program_url=? WHERE handle=?",
+                (scope_hash, program_url, handle),
+            )
+            assert self._conn
+            self._conn.commit()
+        return False  # existing
+
+    def mark_program_scanned(self, handle: str) -> None:
+        cur = self._cursor()
+        cur.execute(
+            """UPDATE scheduler_programs
+               SET last_scanned_at=?, scan_count=scan_count+1
+               WHERE handle=?""",
+            (time.time(), handle),
+        )
+        assert self._conn
+        self._conn.commit()
+
+    def get_programs_due(self, min_interval_hours: float) -> list[dict[str, Any]]:
+        """Return programs not scanned in the last min_interval_hours."""
+        threshold = time.time() - min_interval_hours * 3600
+        cur = self._cursor()
+        cur.execute(
+            """SELECT * FROM scheduler_programs
+               WHERE last_scanned_at IS NULL OR last_scanned_at < ?
+               ORDER BY last_scanned_at ASC NULLS FIRST""",
+            (threshold,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+    def is_finding_notified(self, finding_hash: str) -> bool:
+        cur = self._cursor()
+        cur.execute(
+            "SELECT 1 FROM notified_findings WHERE finding_hash=?", (finding_hash,)
+        )
+        return cur.fetchone() is not None
+
+    def mark_finding_notified(
+        self, finding_hash: str, title: str, severity: str, program_handle: str
+    ) -> None:
+        cur = self._cursor()
+        cur.execute(
+            """INSERT OR IGNORE INTO notified_findings
+               (finding_hash, title, severity, program_handle, notified_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (finding_hash, title, severity, program_handle, time.time()),
+        )
+        assert self._conn
+        self._conn.commit()

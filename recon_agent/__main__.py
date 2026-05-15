@@ -420,6 +420,105 @@ def tools() -> None:
     console.print(f"\n{available_count}/{len(all_tools)} tools available in PATH")
 
 
+@app.command()
+def scheduler_start(
+    interval: Annotated[float, typer.Option("--interval", "-i", help="Hours between cycles")] = 6.0,
+    top: Annotated[int, typer.Option("--top", "-n", help="Programs to scan per cycle")] = 5,
+    depth: Annotated[str, typer.Option("--depth", "-d", help="Depth mode: hunt|fast|standard")] = "hunt",
+    mode: Annotated[str, typer.Option("--mode", "-m", help="Agent mode: adaptive|conservative")] = "adaptive",
+    max_cost: Annotated[float, typer.Option("--max-cost", help="Max API cost per program (USD)")] = 5.0,
+    max_hours: Annotated[float, typer.Option("--max-hours", help="Max hours per program")] = 0.75,
+    severities: Annotated[str, typer.Option("--notify", help="Severities to notify: critical,high,medium")] = "critical,high",
+) -> None:
+    """Start the hunt scheduler (runs every N hours, sends Telegram alerts).
+
+    Tip: run in background with: nohup recon-agent scheduler-start &
+    """
+    _load_env()
+
+    notify_set = {s.strip().lower() for s in severities.split(",") if s.strip()}
+
+    from recon_agent.scheduler.scheduler import HuntScheduler
+    sched = HuntScheduler(
+        interval_hours=interval,
+        programs_per_cycle=top,
+        depth_mode=depth,
+        agent_mode=mode,
+        max_cost_per_program=max_cost,
+        max_hours_per_program=max_hours,
+        notify_severities=notify_set,
+    )
+    try:
+        asyncio.run(sched.run_forever())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Scheduler stopped.[/yellow]")
+
+
+@app.command()
+def scheduler_stop() -> None:
+    """Stop a running scheduler daemon by PID."""
+    _load_env()
+    import signal as _sig
+    from recon_agent.scheduler.scheduler import read_pid
+    pid = read_pid()
+    if pid is None:
+        console.print("[yellow]No running scheduler found (no PID file).[/yellow]")
+        raise typer.Exit()
+    try:
+        import os as _os
+        _os.kill(pid, _sig.SIGTERM)
+        console.print(f"[green]Sent SIGTERM to scheduler PID {pid}[/green]")
+    except ProcessLookupError:
+        console.print(f"[yellow]Process {pid} not found — cleaning up PID file.[/yellow]")
+        from pathlib import Path
+        (Path.home() / ".recon-agent" / "scheduler.pid").unlink(missing_ok=True)
+
+
+@app.command()
+def scheduler_status() -> None:
+    """Show scheduler status: PID, next scan queue, notification config."""
+    _load_env()
+    from recon_agent.scheduler.scheduler import read_pid, _DB_PATH, _PID_FILE
+    from recon_agent.storage.db import Database
+
+    pid = read_pid()
+    if pid:
+        console.print(f"[green]Scheduler running[/green] (PID {pid})")
+    else:
+        console.print("[yellow]Scheduler not running[/yellow]")
+
+    has_telegram = bool(
+        os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")
+    )
+    console.print(f"Telegram alerts: {'[green]configured[/green]' if has_telegram else '[red]not configured[/red]'}")
+
+    if not _DB_PATH.exists():
+        console.print("[dim]No scan history yet.[/dim]")
+        return
+
+    db = Database(_DB_PATH)
+    db.connect()
+    programs = db.get_programs_due(0)
+    db.close()
+
+    if not programs:
+        console.print("[dim]No programs tracked yet.[/dim]")
+        return
+
+    t = Table(title="Tracked Programs", show_header=True)
+    t.add_column("Handle")
+    t.add_column("Last Scanned")
+    t.add_column("Scans")
+    for p in sorted(programs, key=lambda x: x.get("last_scanned_at") or 0):
+        last = p.get("last_scanned_at")
+        last_str = (
+            datetime.fromtimestamp(last).strftime("%m-%d %H:%M")
+            if last else "[dim]never[/dim]"
+        )
+        t.add_row(p["handle"], last_str, str(p.get("scan_count", 0)))
+    console.print(t)
+
+
 def main() -> None:
     _load_env()
     app()

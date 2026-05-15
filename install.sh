@@ -96,6 +96,10 @@ ANTHROPIC_API_KEY=
 # H1_USERNAME=your_h1_handle
 # H1_API_TOKEN=your_api_token
 
+# Optional: Telegram alerts — get via @BotFather, chat_id via /getUpdates
+# TELEGRAM_BOT_TOKEN=123456:ABCdef...
+# TELEGRAM_CHAT_ID=987654321
+
 # Optional: WPScan vuln database
 # WPSCAN_API_TOKEN=
 
