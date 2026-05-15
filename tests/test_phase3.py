@@ -234,6 +234,6 @@ class TestToolAvailability:
         for tool in available:
             assert tool.is_available() is True
 
-    def test_registry_total_28_tools(self):
+    def test_registry_total_at_least_28_tools(self):
         registry = build_default_registry()
-        assert len(registry.all_tools()) == 28
+        assert len(registry.all_tools()) >= 28

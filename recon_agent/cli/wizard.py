@@ -24,6 +24,7 @@ class WizardResult:
 
 
 _DEPTH_CHOICES = {
+    "Hunt (~45min, secrets + takeovers + critical CVEs) [RECOMENDADO para bug bounty]": "hunt",
     "Rápido (~15min, recon + nuclei safe)": "fast",
     "Padrão (~45min, recon + web scan completo)": "standard",
     "Profundo (~3h, tudo + fuzzing pesado)": "deep",

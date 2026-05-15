@@ -18,7 +18,9 @@ def _get_env() -> Environment:
 
 
 def render_planner(context: dict[str, Any]) -> str:
-    return _get_env().get_template("planner.j2").render(**context)
+    depth_mode = context.get("depth_mode", "standard")
+    template = "planner_hunt.j2" if depth_mode == "hunt" else "planner.j2"
+    return _get_env().get_template(template).render(**context)
 
 
 def render_observer(context: dict[str, Any]) -> str:

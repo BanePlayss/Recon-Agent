@@ -38,6 +38,26 @@ modes:
     fuzzing_enabled: true
     deep_analysis: true
 
+  hunt:
+    label: "Hunt (~45min, secrets + takeovers + critical CVEs)"
+    max_iterations: 60
+    max_hours: 0.75
+    allowed_categories:
+      - recon_passive
+      - recon_active
+      - web_scan
+      - secrets
+    nuclei_severity: ["critical", "high"]
+    fuzzing_enabled: false
+    deep_analysis: true
+    planner_template: planner_hunt.j2
+    priority_findings:
+      - secrets
+      - subdomain_takeover
+      - critical_cve
+      - exposed_admin
+    min_confidence: 0.75
+
 agent_modes:
   adaptive:
     label: "Adaptativo (LLM decide, aprova ações ativas)"

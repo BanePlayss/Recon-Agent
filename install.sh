@@ -91,6 +91,11 @@ GEMINI_API_KEY=
 # Get at https://console.anthropic.com/
 ANTHROPIC_API_KEY=
 
+# Optional: HackerOne API credentials — enables live program discovery
+# Get at https://hackerone.com/settings/api_token/edit
+# H1_USERNAME=your_h1_handle
+# H1_API_TOKEN=your_api_token
+
 # Optional: WPScan vuln database
 # WPSCAN_API_TOKEN=
 

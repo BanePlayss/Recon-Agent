@@ -63,13 +63,15 @@ def build_default_registry() -> ToolRegistry:
     from recon_agent.tools.secrets.secretfinder import SecretFinderTool
     from recon_agent.tools.cloud.trivy import TrivyTool
     from recon_agent.tools.cloud.prowler import ProwlerTool
+    from recon_agent.tools.recon.takeover import SubdomainTakeoverTool
+    from recon_agent.tools.secrets.jssecrets import JsSecretsTool
 
     registry = ToolRegistry()
     for tool in [
         # recon passive
         SubfinderTool(), AmassTool(), TheHarvesterTool(), CrtshTool(),
         # recon active
-        HttpxTool(), DnsxTool(), Wafw00fTool(),
+        HttpxTool(), DnsxTool(), Wafw00fTool(), SubdomainTakeoverTool(),
         # infra
         NmapTool(), NaabuTool(), MasscanTool(),
         # web scan
@@ -78,7 +80,7 @@ def build_default_registry() -> ToolRegistry:
         # exploit (all require manual approval)
         SqlmapTool(), DalfoxTool(), XSStrikeTool(), NoSQLMapTool(), CommixTool(),
         # secrets
-        TrufflehogTool(), GitleaksTool(), SecretFinderTool(),
+        TrufflehogTool(), GitleaksTool(), SecretFinderTool(), JsSecretsTool(),
         # cloud
         TrivyTool(), ProwlerTool(),
     ]:
