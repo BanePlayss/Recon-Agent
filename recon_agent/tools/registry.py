@@ -1,13 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import structlog
 
 from recon_agent.tools.base import Tool
-
-if TYPE_CHECKING:
-    pass
 
 logger = structlog.get_logger(__name__)
 
@@ -40,31 +35,41 @@ def build_default_registry() -> ToolRegistry:
     from recon_agent.tools.recon.httpx_tool import HttpxTool
     from recon_agent.tools.recon.amass import AmassTool
     from recon_agent.tools.recon.nmap_tool import NmapTool
+    from recon_agent.tools.recon.masscan import MasscanTool
+    from recon_agent.tools.recon.theharvester import TheHarvesterTool
     from recon_agent.tools.web.nuclei import NucleiTool
     from recon_agent.tools.web.ffuf import FfufTool
     from recon_agent.tools.web.katana import KatanaTool
     from recon_agent.tools.web.nikto import NiktoTool
     from recon_agent.tools.web.wpscan import WpscanTool
+    from recon_agent.tools.web.wafw00f import Wafw00fTool
+    from recon_agent.tools.web.testssl import TestsslTool
+    from recon_agent.tools.web.arjun import ArjunTool
+    from recon_agent.tools.web.gobuster import GobusterTool
     from recon_agent.tools.exploit.sqlmap import SqlmapTool
     from recon_agent.tools.exploit.dalfox import DalfoxTool
+    from recon_agent.tools.exploit.xsstrike import XSStrikeTool
+    from recon_agent.tools.exploit.nosqlmap import NoSQLMapTool
+    from recon_agent.tools.exploit.commix import CommixTool
     from recon_agent.tools.secrets.trufflehog import TrufflehogTool
     from recon_agent.tools.secrets.gitleaks import GitleaksTool
+    from recon_agent.tools.secrets.secretfinder import SecretFinderTool
 
     registry = ToolRegistry()
     for tool in [
-        SubfinderTool(),
-        AmassTool(),
-        HttpxTool(),
-        NmapTool(),
-        NucleiTool(),
-        FfufTool(),
-        KatanaTool(),
-        NiktoTool(),
-        WpscanTool(),
-        SqlmapTool(),
-        DalfoxTool(),
-        TrufflehogTool(),
-        GitleaksTool(),
+        # recon passive
+        SubfinderTool(), AmassTool(), TheHarvesterTool(),
+        # recon active
+        HttpxTool(), Wafw00fTool(),
+        # infra
+        NmapTool(), MasscanTool(),
+        # web scan
+        NucleiTool(), FfufTool(), KatanaTool(), NiktoTool(),
+        WpscanTool(), TestsslTool(), ArjunTool(), GobusterTool(),
+        # exploit (all require manual approval)
+        SqlmapTool(), DalfoxTool(), XSStrikeTool(), NoSQLMapTool(), CommixTool(),
+        # secrets
+        TrufflehogTool(), GitleaksTool(), SecretFinderTool(),
     ]:
         registry.register(tool)
     return registry

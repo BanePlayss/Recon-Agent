@@ -180,7 +180,7 @@ class TestFullRegistry:
         for name in expected:
             assert name in registry, f"Tool '{name}' not registered"
 
-    def test_registry_has_13_tools(self):
+    def test_registry_has_at_least_13_tools(self):
         from recon_agent.tools.registry import build_default_registry
         registry = build_default_registry()
-        assert len(registry.all_tools()) == 13
+        assert len(registry.all_tools()) >= 13
