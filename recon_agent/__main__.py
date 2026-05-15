@@ -397,7 +397,168 @@ def programs(
 
 
 @app.command()
-def tools() -> None:
+def findings(
+    run_id: Annotated[str, typer.Option("--run", "-r", help="Filter by run ID prefix")] = "",
+    severity: Annotated[str, typer.Option("--severity", "-s", help="Filter: critical,high,medium,low,info")] = "",
+    limit: Annotated[int, typer.Option("--limit", "-n", help="Max findings to show")] = 50,
+) -> None:
+    """List all confirmed findings across runs. Use with 'draft' to generate reports."""
+    _load_env()
+    db_path = Path.home() / ".recon-agent" / "recon.db"
+    if not db_path.exists():
+        console.print("[yellow]No database found. Run a scan first.[/yellow]")
+        raise typer.Exit()
+
+    from recon_agent.storage.db import Database
+    db = Database(db_path)
+    db.connect()
+    runs = db.list_runs()
+    db.close()
+
+    if run_id:
+        runs = [r for r in runs if r["id"].startswith(run_id)]
+
+    severity_filter = {s.strip().lower() for s in severity.split(",") if s.strip()}
+
+    all_findings: list[dict] = []
+    db.connect()
+    for run in runs:
+        for f in db.get_findings(run["id"]):
+            if f.get("false_positive"):
+                continue
+            if severity_filter and f["severity"] not in severity_filter:
+                continue
+            f["program_url"] = run["program_url"]
+            f["run_id_short"] = run["id"][:8]
+            all_findings.append(f)
+    db.close()
+
+    all_findings.sort(key=lambda f: (
+        ["critical", "high", "medium", "low", "info"].index(f.get("severity", "info")),
+    ))
+
+    _SEV_COLOR = {
+        "critical": "bold red",
+        "high": "red",
+        "medium": "yellow",
+        "low": "blue",
+        "info": "dim",
+    }
+
+    t = Table(title=f"Findings ({min(len(all_findings), limit)} shown)", show_header=True)
+    t.add_column("ID", style="dim", max_width=10)
+    t.add_column("Severity", max_width=9)
+    t.add_column("Title", max_width=50)
+    t.add_column("Asset", max_width=40)
+    t.add_column("Conf%", max_width=5)
+    t.add_column("Program", max_width=25)
+
+    for f in all_findings[:limit]:
+        sev = f.get("severity", "info")
+        color = _SEV_COLOR.get(sev, "white")
+        t.add_row(
+            f["id"][:8],
+            f"[{color}]{sev.upper()}[/{color}]",
+            f.get("title", "")[:50],
+            f.get("asset", "")[:40],
+            f"{float(f.get('confidence', 0)) * 100:.0f}",
+            f.get("program_url", "")[:25],
+        )
+
+    console.print(t)
+    if len(all_findings) > limit:
+        console.print(f"[dim]... and {len(all_findings) - limit} more. Use --limit to show more.[/dim]")
+    console.print("[dim]Use: recon-agent draft <finding-id-prefix> to generate a report[/dim]")
+
+
+@app.command()
+def draft(
+    finding_id: Annotated[str, typer.Argument(help="Finding ID or prefix (from 'recon-agent findings')")],
+    output: Annotated[str, typer.Option("--output", "-o", help="Save to file path")] = "",
+    edit: Annotated[bool, typer.Option("--edit", "-e", help="Open in $EDITOR after generating")] = False,
+) -> None:
+    """Generate a ready-to-submit HackerOne report from a finding.
+
+    Example:
+      recon-agent draft abc12345
+      recon-agent draft abc12345 --output ~/reports/xss-shopify.md --edit
+    """
+    _load_env()
+    db_path = Path.home() / ".recon-agent" / "recon.db"
+    if not db_path.exists():
+        console.print("[red]No database found.[/red]")
+        raise typer.Exit(1)
+
+    from recon_agent.storage.db import Database
+    from recon_agent.core.state import Finding, Severity
+    from recon_agent.reporting.drafter import draft as make_draft
+
+    db = Database(db_path)
+    db.connect()
+    runs = db.list_runs()
+
+    matched_finding: dict | None = None
+    matched_program = ""
+    for run in runs:
+        for f in db.get_findings(run["id"]):
+            if f["id"].startswith(finding_id):
+                matched_finding = f
+                matched_program = run["program_url"]
+                break
+        if matched_finding:
+            break
+    db.close()
+
+    if not matched_finding:
+        console.print(f"[red]No finding matching '{finding_id}'. Run 'recon-agent findings' to list.[/red]")
+        raise typer.Exit(1)
+
+    # Reconstruct Finding from DB dict
+    finding = Finding(
+        id=matched_finding["id"],
+        title=matched_finding["title"],
+        severity=Severity(matched_finding["severity"]),
+        asset=matched_finding["asset"],
+        description=matched_finding.get("description") or "",
+        evidence=matched_finding.get("evidence") or "",
+        poc=matched_finding.get("poc"),
+        impact=matched_finding.get("impact") or "",
+        remediation=matched_finding.get("remediation") or "",
+        cwe=matched_finding.get("cwe"),
+        cvss=matched_finding.get("cvss"),
+        source_tool=matched_finding.get("source_tool") or "unknown",
+        confidence=float(matched_finding.get("confidence") or 0.7),
+    )
+
+    report_md = make_draft(finding, matched_program)
+
+    # Print to terminal
+    from rich.markdown import Markdown
+    from rich.panel import Panel
+    console.print(Panel(
+        Markdown(report_md),
+        title=f"[bold]Draft report — {finding.severity.upper()}[/bold]",
+        subtitle=f"[dim]Finding: {finding.id[:8]}[/dim]",
+    ))
+
+    # Save to file
+    if output:
+        save_path = Path(output)
+    else:
+        safe_title = "".join(c if c.isalnum() or c in "-_" else "_" for c in finding.title[:40])
+        save_path = Path.home() / ".recon-agent" / "drafts" / f"{finding.id[:8]}_{safe_title}.md"
+
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    save_path.write_text(report_md, encoding="utf-8")
+    console.print(f"\n[green]Saved:[/green] {save_path}")
+
+    if edit:
+        editor = os.environ.get("EDITOR", "nano")
+        import subprocess
+        subprocess.run([editor, str(save_path)])
+
+
+
     """List all registered tools and their availability."""
     from recon_agent.tools.registry import build_default_registry
     registry = build_default_registry()
