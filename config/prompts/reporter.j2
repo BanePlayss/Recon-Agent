@@ -12,11 +12,12 @@
 **Targets:** {{ state.targets_in_scope | join(', ') }}
 **Subdomains discovered:** {{ state.discovered_subdomains | list | length }}
 **Alive hosts:** {{ state.alive_hosts | length }}
-**Total findings:** {{ state.findings | length }}
+**Total findings:** {{ state.real_findings() | length }} confirmed ({{ state.findings | length - state.real_findings() | length }} false positives)
+**Attack chains:** {{ state.attack_chains | length }}
 
 ### Finding Breakdown
 {% set ns = namespace(critical=0, high=0, medium=0, low=0, info=0) %}
-{% for f in state.findings %}
+{% for f in state.real_findings() %}
   {% if f.severity == 'critical' %}{% set ns.critical = ns.critical + 1 %}
   {% elif f.severity == 'high' %}{% set ns.high = ns.high + 1 %}
   {% elif f.severity == 'medium' %}{% set ns.medium = ns.medium + 1 %}
@@ -49,13 +50,35 @@
 
 ---
 
-## Findings
+## Attack Chains
+{% if state.attack_chains %}
+{% for chain in state.attack_chains %}
+### Chain {{ loop.index }}: [{{ chain.combined_severity.upper() }}] {{ chain.title }}
 
-{% for f in state.findings | sort(attribute='severity') %}
+{{ chain.description }}
+
+**Involved findings:** {{ chain.finding_ids | join(', ') }}
+
+{% if chain.poc %}
+**Combined PoC:**
+{{ chain.poc }}
+{% endif %}
+
+---
+{% endfor %}
+{% else %}
+*No attack chains identified.*
+{% endif %}
+
+---
+
+## Confirmed Findings
+
+{% for f in state.real_findings() | sort(attribute='severity') %}
 ### {{ loop.index }}. [{{ f.severity.upper() }}] {{ f.title }}
 
 **Asset:** `{{ f.asset }}`
-**Confidence:** {{ "%.0f"|format(f.confidence * 100) }}%
+**Confidence:** {{ "%.0f"|format(f.confidence * 100) }}%{% if f.deep_analyzed %} ✓ Deep-analyzed{% endif %}
 **Source:** {{ f.source_tool }}
 {% if f.cwe %}**CWE:** {{ f.cwe }}{% endif %}
 {% if f.cvss %}**CVSS:** {{ f.cvss }}{% endif %}

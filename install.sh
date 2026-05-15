@@ -27,6 +27,7 @@ go_install() {
     go install -v "$1" 2>/dev/null || echo "  [WARN] Failed to install $1"
 }
 
+go_install github.com/owasp-amass/amass/v4/...@master
 go_install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 go_install github.com/projectdiscovery/httpx/cmd/httpx@latest
 go_install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest

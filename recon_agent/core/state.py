@@ -39,6 +39,15 @@ class Finding(BaseModel):
     source_tool: str
     confidence: float = Field(ge=0.0, le=1.0)
     false_positive: bool = False
+    deep_analyzed: bool = False
+
+
+class AttackChain(BaseModel):
+    title: str
+    finding_ids: list[str]
+    combined_severity: Severity
+    description: str
+    poc: str | None = None
 
 
 class ActionLog(BaseModel):
@@ -58,6 +67,7 @@ class AgentState(BaseModel):
     alive_hosts: dict[str, dict[str, Any]] = Field(default_factory=dict)
     open_ports: dict[str, list[int]] = Field(default_factory=dict)
     findings: list[Finding] = Field(default_factory=list)
+    attack_chains: list[AttackChain] = Field(default_factory=list)
     actions_taken: list[ActionLog] = Field(default_factory=list)
     iteration: int = 0
     cost_usd: float = 0.0
@@ -80,3 +90,6 @@ class AgentState(BaseModel):
         return any(
             a.tool == tool and a.target == target for a in self.actions_taken
         )
+
+    def real_findings(self) -> list[Finding]:
+        return [f for f in self.findings if not f.false_positive]

@@ -9,6 +9,7 @@ modes:
       - web_scan
     nuclei_severity: ["critical", "high"]
     fuzzing_enabled: false
+    deep_analysis: false
 
   standard:
     label: "Padrão (~45min, recon + web scan completo)"
@@ -21,6 +22,7 @@ modes:
       - web_scan
     nuclei_severity: ["critical", "high", "medium"]
     fuzzing_enabled: false
+    deep_analysis: true
 
   deep:
     label: "Profundo (~3h, tudo + fuzzing pesado)"
@@ -34,6 +36,7 @@ modes:
       - secrets
     nuclei_severity: ["critical", "high", "medium", "low"]
     fuzzing_enabled: true
+    deep_analysis: true
 
 agent_modes:
   adaptive:

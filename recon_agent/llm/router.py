@@ -1,13 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import structlog
 
 from recon_agent.core.state import AgentState, Finding, Severity, ActionLog
 from recon_agent.llm.gemini import GeminiClient
-from recon_agent.llm.prompts import render_planner, render_observer
+from recon_agent.llm.prompts import (
+    render_planner,
+    render_observer,
+    render_correlator,
+    render_deep_analysis,
+)
 from recon_agent.tools.base import ToolResult
+
+if TYPE_CHECKING:
+    from recon_agent.llm.claude import ClaudeClient
 
 logger = structlog.get_logger(__name__)
 
@@ -29,8 +37,13 @@ class PlannerAction:
 
 
 class LLMRouter:
-    def __init__(self, client: GeminiClient) -> None:
-        self._client = client
+    def __init__(
+        self,
+        gemini_client: GeminiClient,
+        claude_client: "ClaudeClient | None" = None,
+    ) -> None:
+        self._gemini = gemini_client
+        self._claude = claude_client
 
     async def plan(
         self,
@@ -52,7 +65,7 @@ class LLMRouter:
             "max_cost_usd": max_cost_usd,
         }
         prompt = render_planner(context)
-        result, cost = await self._client.generate_json(prompt, temperature=0.3)
+        result, cost = await self._gemini.generate_json(prompt, temperature=0.3)
 
         if result.get("stop"):
             return PlannerAction(
@@ -86,13 +99,80 @@ class LLMRouter:
     ) -> tuple[dict[str, Any], float]:
         context = {"tool_result": tool_result, "state": state}
         prompt = render_observer(context)
-        result, cost = await self._client.generate_json(prompt, temperature=0.1)
+        result, cost = await self._gemini.generate_json(prompt, temperature=0.1)
 
         logger.info(
             "observer.result",
             new_subdomains=len(result.get("new_subdomains", [])),
             new_findings=len(result.get("findings", [])),
             summary=result.get("summary", "")[:100],
+        )
+        return result, cost
+
+    async def deep_analyze(
+        self, finding: Finding, state: AgentState
+    ) -> tuple[Finding, float]:
+        """
+        Use Claude to enrich a critical/high finding.
+        Falls back to Gemini if Claude is unavailable.
+        Returns the updated Finding and cost.
+        """
+        context = {"finding": finding, "state": state}
+        prompt = render_deep_analysis(context)
+
+        if self._claude:
+            result, cost = await self._claude.deep_analyze(prompt)
+        else:
+            result, cost = await self._gemini.generate_json(prompt, temperature=0.1)
+
+        if result.get("is_false_positive"):
+            finding.false_positive = True
+            logger.info(
+                "deep_analysis.false_positive",
+                title=finding.title,
+                reason=result.get("false_positive_reason", ""),
+            )
+            finding.deep_analyzed = True
+            return finding, cost
+
+        severity_str = result.get("validated_severity", finding.severity.value).lower()
+        try:
+            finding.severity = Severity(severity_str)
+        except ValueError:
+            pass
+
+        finding.title = result.get("validated_title", finding.title)
+        finding.description = result.get("description", finding.description)
+        finding.poc = result.get("poc", finding.poc)
+        finding.impact = result.get("impact", finding.impact)
+        finding.remediation = result.get("remediation", finding.remediation)
+        finding.cwe = result.get("cwe", finding.cwe)
+        finding.cvss = result.get("cvss", finding.cvss)
+        finding.confidence = float(result.get("confidence", finding.confidence))
+        finding.deep_analyzed = True
+
+        logger.info(
+            "deep_analysis.done",
+            title=finding.title,
+            severity=finding.severity,
+            cvss=finding.cvss,
+        )
+        return finding, cost
+
+    async def correlate(
+        self, state: AgentState
+    ) -> tuple[dict[str, Any], float]:
+        context = {
+            "findings": state.real_findings(),
+            "state": state,
+        }
+        prompt = render_correlator(context)
+        result, cost = await self._gemini.generate_json(prompt, temperature=0.2)
+
+        logger.info(
+            "correlator.result",
+            chains=len(result.get("attack_chains", [])),
+            fp_ids=len(result.get("false_positive_ids", [])),
         )
         return result, cost
 

@@ -18,18 +18,20 @@ def _get_env() -> Environment:
 
 
 def render_planner(context: dict[str, Any]) -> str:
-    env = _get_env()
-    template = env.get_template("planner.j2")
-    return template.render(**context)
+    return _get_env().get_template("planner.j2").render(**context)
 
 
 def render_observer(context: dict[str, Any]) -> str:
-    env = _get_env()
-    template = env.get_template("observer.j2")
-    return template.render(**context)
+    return _get_env().get_template("observer.j2").render(**context)
 
 
 def render_reporter(context: dict[str, Any]) -> str:
-    env = _get_env()
-    template = env.get_template("reporter.j2")
-    return template.render(**context)
+    return _get_env().get_template("reporter.j2").render(**context)
+
+
+def render_correlator(context: dict[str, Any]) -> str:
+    return _get_env().get_template("correlator.j2").render(**context)
+
+
+def render_deep_analysis(context: dict[str, Any]) -> str:
+    return _get_env().get_template("deep_analysis.j2").render(**context)

@@ -7,7 +7,15 @@ tools:
     description: "Passive subdomain enumeration via OSINT sources"
     flags:
       default: ["-silent", "-o", "{output_file}"]
-      with_all: ["-silent", "-all", "-o", "{output_file}"]
+
+  amass:
+    binary: amass
+    category: recon_passive
+    requires_approval: false
+    timeout_s: 600
+    description: "Deep passive subdomain enumeration with multiple data sources"
+    flags:
+      default: ["-passive", "-o", "{output_file}"]
 
   httpx:
     binary: httpx
@@ -25,6 +33,16 @@ tools:
         - "-o"
         - "{output_file}"
 
+  nmap:
+    binary: nmap
+    category: infra_scan
+    requires_approval: false
+    timeout_s: 600
+    description: "Port scanning and service/version detection"
+    flags:
+      default: ["-sV", "-sC", "-T4", "--open", "-oN", "{output_file}"]
+      fast: ["-F", "-T4", "--open", "-oN", "{output_file}"]
+
   nuclei:
     binary: nuclei
     category: web_scan
@@ -39,4 +57,129 @@ tools:
         - "{output_file}"
         - "-severity"
         - "{severity}"
-      no_interactsh: ["-no-interactsh"]
+        - "-no-interactsh"
+
+  ffuf:
+    binary: ffuf
+    category: web_scan
+    requires_approval: false
+    timeout_s: 300
+    description: "Directory and endpoint fuzzing / brute-force"
+    flags:
+      default:
+        - "-u"
+        - "{target}/FUZZ"
+        - "-w"
+        - "{wordlist}"
+        - "-mc"
+        - "200,201,204,301,302,307,401,403,405"
+        - "-o"
+        - "{output_file}"
+        - "-of"
+        - "json"
+        - "-s"
+
+  katana:
+    binary: katana
+    category: web_scan
+    requires_approval: false
+    timeout_s: 300
+    description: "Web crawler for endpoint discovery"
+    flags:
+      default:
+        - "-silent"
+        - "-o"
+        - "{output_file}"
+        - "-depth"
+        - "3"
+        - "-js-crawl"
+        - "-known-files"
+        - "all"
+
+  nikto:
+    binary: nikto
+    category: web_scan
+    requires_approval: false
+    timeout_s: 600
+    description: "Web server misconfiguration and vulnerability scanner"
+    flags:
+      default: ["-host", "{target}", "-output", "{output_file}", "-Format", "json", "-nointeractive"]
+
+  wpscan:
+    binary: wpscan
+    category: web_scan
+    requires_approval: false
+    timeout_s: 300
+    description: "WordPress vulnerability scanner"
+    flags:
+      default:
+        - "--url"
+        - "{target}"
+        - "-o"
+        - "{output_file}"
+        - "--format"
+        - "json"
+        - "--no-update"
+
+  sqlmap:
+    binary: sqlmap
+    category: exploit
+    requires_approval: true
+    timeout_s: 600
+    description: "SQL injection detection and exploitation"
+    flags:
+      default:
+        - "-u"
+        - "{target}"
+        - "--batch"
+        - "--level=2"
+        - "--risk=1"
+        - "--output-dir"
+        - "{output_dir}"
+
+  dalfox:
+    binary: dalfox
+    category: exploit
+    requires_approval: true
+    timeout_s: 300
+    description: "XSS parameter scanner and exploiter"
+    flags:
+      default:
+        - "url"
+        - "{target}"
+        - "--output"
+        - "{output_file}"
+        - "--format"
+        - "json"
+        - "--no-color"
+        - "--skip-bav"
+
+  trufflehog:
+    binary: trufflehog
+    category: secrets
+    requires_approval: false
+    timeout_s: 300
+    description: "Secret scanning in git repositories and filesystem"
+    flags:
+      default:
+        - "git"
+        - "{target}"
+        - "--json"
+        - "--no-update"
+
+  gitleaks:
+    binary: gitleaks
+    category: secrets
+    requires_approval: false
+    timeout_s: 300
+    description: "Git secret and sensitive data detection"
+    flags:
+      default:
+        - "detect"
+        - "--source"
+        - "{target}"
+        - "--report-format"
+        - "json"
+        - "--report-path"
+        - "{output_file}"
+        - "--no-git"

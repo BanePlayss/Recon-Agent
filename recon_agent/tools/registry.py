@@ -38,10 +38,33 @@ class ToolRegistry:
 def build_default_registry() -> ToolRegistry:
     from recon_agent.tools.recon.subfinder import SubfinderTool
     from recon_agent.tools.recon.httpx_tool import HttpxTool
+    from recon_agent.tools.recon.amass import AmassTool
+    from recon_agent.tools.recon.nmap_tool import NmapTool
     from recon_agent.tools.web.nuclei import NucleiTool
+    from recon_agent.tools.web.ffuf import FfufTool
+    from recon_agent.tools.web.katana import KatanaTool
+    from recon_agent.tools.web.nikto import NiktoTool
+    from recon_agent.tools.web.wpscan import WpscanTool
+    from recon_agent.tools.exploit.sqlmap import SqlmapTool
+    from recon_agent.tools.exploit.dalfox import DalfoxTool
+    from recon_agent.tools.secrets.trufflehog import TrufflehogTool
+    from recon_agent.tools.secrets.gitleaks import GitleaksTool
 
     registry = ToolRegistry()
-    registry.register(SubfinderTool())
-    registry.register(HttpxTool())
-    registry.register(NucleiTool())
+    for tool in [
+        SubfinderTool(),
+        AmassTool(),
+        HttpxTool(),
+        NmapTool(),
+        NucleiTool(),
+        FfufTool(),
+        KatanaTool(),
+        NiktoTool(),
+        WpscanTool(),
+        SqlmapTool(),
+        DalfoxTool(),
+        TrufflehogTool(),
+        GitleaksTool(),
+    ]:
+        registry.register(tool)
     return registry

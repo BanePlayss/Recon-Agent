@@ -1,0 +1,56 @@
+You are reviewing a security finding from an automated recon agent.
+
+## Finding to Analyze
+
+**Title:** {{ finding.title }}
+**Severity:** {{ finding.severity }}
+**Asset:** {{ finding.asset }}
+**Source Tool:** {{ finding.source_tool }}
+**Confidence:** {{ "%.0f"|format(finding.confidence * 100) }}%
+
+**Description:**
+{{ finding.description }}
+
+**Evidence:**
+```
+{{ finding.evidence[:3000] }}
+```
+
+{% if finding.poc %}
+**Existing PoC:**
+{{ finding.poc }}
+{% endif %}
+
+## Target Context
+- Program: {{ state.program_url }}
+- In-scope: {{ state.targets_in_scope | join(', ') }}
+
+---
+
+## Your Task
+
+Analyze this finding and return a JSON object with your assessment:
+
+```json
+{
+  "is_false_positive": false,
+  "false_positive_reason": null,
+  "validated_title": "Precise, specific title",
+  "validated_severity": "critical|high|medium|low|info",
+  "cvss": 8.1,
+  "cwe": "CWE-79",
+  "description": "Technical description of the vulnerability",
+  "poc": "Step-by-step reproduction:\n1. ...\n2. ...\n3. Expected output: ...",
+  "impact": "What an attacker can achieve by exploiting this",
+  "remediation": "Specific fix with code examples if applicable",
+  "confidence": 0.95,
+  "analysis_notes": "Any caveats or additional context"
+}
+```
+
+Rules:
+- Set `is_false_positive: true` if: evidence is ambiguous, it's a CDN/WAF response, informational-only, or a known scanner false positive pattern
+- `cvss` must be a float between 0.0 and 10.0
+- `poc` must be reproducible step-by-step — not generic
+- `severity` must match the CVSS score (critical=9.0+, high=7.0-8.9, medium=4.0-6.9, low=0.1-3.9)
+- Base your analysis ONLY on the evidence provided

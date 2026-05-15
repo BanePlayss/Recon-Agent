@@ -13,7 +13,6 @@ console = Console()
 
 
 def _load_env() -> None:
-    """Load .env from ~/.recon-agent/.env if it exists."""
     env_path = Path.home() / ".recon-agent" / ".env"
     if env_path.exists():
         for line in env_path.read_text(encoding="utf-8").splitlines():
@@ -41,7 +40,6 @@ async def _run() -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     configure_logging(log_file=run_dir / "agent.log", level="INFO")
-    logger = structlog.get_logger(__name__)
 
     os.environ["GEMINI_API_KEY"] = wizard_result.gemini_api_key
 
@@ -53,6 +51,18 @@ async def _run() -> None:
 
     registry = build_default_registry()
     llm_client = GeminiClient()
+
+    # Claude client is optional — enables deep analysis on critical/high findings
+    claude_client = None
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        try:
+            from recon_agent.llm.claude import ClaudeClient
+            claude_client = ClaudeClient(api_key=anthropic_key)
+            console.print("[green]Claude API available — deep analysis enabled[/green]")
+        except Exception as e:
+            console.print(f"[yellow]Claude API unavailable ({e}), using Gemini for deep analysis[/yellow]")
+
     policy = PolicyEngine(state, agent_mode=wizard_result.agent_mode)
     guardrails = Guardrails(
         max_iterations=wizard_result.max_iterations,
@@ -66,6 +76,8 @@ async def _run() -> None:
     db.connect()
     run_id = db.create_run(wizard_result.program_url, run_dir)
 
+    enable_deep = wizard_result.depth_mode in ("standard", "deep")
+
     orchestrator = Orchestrator(
         state=state,
         registry=registry,
@@ -76,6 +88,8 @@ async def _run() -> None:
         run_dir=run_dir,
         depth_mode=wizard_result.depth_mode,
         agent_mode=wizard_result.agent_mode,
+        claude_client=claude_client,
+        enable_deep_analysis=enable_deep,
     )
 
     final_state = await orchestrator.run()
